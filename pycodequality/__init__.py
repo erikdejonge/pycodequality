@@ -46,7 +46,7 @@ load-plugins=
 # Deprecated. It was used to include symbolic ids of messages in output. Use
 # --msg-template instead.
 # Use multiple processes to speed up Pylint.
-jobs=8
+jobs=16
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -93,8 +93,9 @@ comment=no
 
 # Template used to display messages. This is a python new-style format string
 # used to format the message information. See doc for all details
-#msg-template=
-
+msg-template={msg_id}:{path}:{line}
+             {column}:{msg}
+             '
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -337,7 +338,7 @@ exclude-protected=_asdict,_fields,_replace,_source,_make
 
 [DESIGN]
 # Maximum number of arguments for function / method
-max-args=5
+max-args=12
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
@@ -413,56 +414,21 @@ class IArguments(Arguments):
         super().__init__(doc, validateschema, argvalue, yamlstr, yamlfile, parse_arguments, persistoption, alwaysfullhelp, version, parent)
 
 
-def check_files(checkfiles, files, fpo):
+def check_files(checkfiles, files, filepatho):
     """
     @type checkfiles: set
     @type files: list
-    @type fpo: str
+    @type filepatho: str
     @return: None
     """
     for file in files:
         if file.endswith(".py"):
-            fp = os.path.join(fpo, file)
-            if os.path.exists(fp):
-                checkfiles.add(fp)
+            filepath = os.path.join(filepatho, file)
+            if os.path.exists(filepath):
+                checkfiles.add(filepath)
             else:
-                raise RuntimeError(str(fp) + " does not exist")
+                raise RuntimeError(str(filepath) + " does not exist")
 
-
-def rate_code(cnt, fp, showhints):
-    """
-    @type cnt: int
-    @type fp: str
-    @type showhints: bool
-    @return: None
-    """
-    cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + fp + " | grep 'Your code has'"
-    result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=False)
-
-    if "0.00)" in result:
-        result1 = result.split("(")[0].strip()
-        result2 = ""
-    else:
-        rsp = result.split("(")
-        result1 = rsp[0].strip()
-        if len(rsp) > 1:
-            result2 = "(" + rsp[1].strip()
-        else:
-            result2 = str(result)
-
-    result1 = cleanresult(result1)
-    result2 = cleanresult(result2)
-
-    if float(result1) < 7 and showhints:
-        cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + fp
-        hints = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)
-        print("\033[33mreturncode: " + str(hints[0]) + "\033[0m")
-        print("\033[90m" + hints[1] + "\033[0m")
-
-        query_yes_no("Continue with next file?")
-
-    print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(fp)), os.path.basename(fp)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
-    return float(result1)
 
 def cleanresult(result):
     """
@@ -472,20 +438,57 @@ def cleanresult(result):
     return result.replace("Your code has been rated at", "").replace("previous run", "was").replace("/10", "").strip()
 
 
+def rate_code(cnt, filepath, showhints):
+    """
+    @type cnt: int
+    @type filepath: str
+    @type showhints: bool
+    @return: None
+    """
+    cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath + " | grep 'Your code has'"
+    result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=False)
+
+    if "0.00)" in result:
+        result1 = result.split("(")[0].strip()
+        result2 = ""
+    else:
+        rsp = result.split("(")
+        result1 = rsp[0].strip()
+
+        if len(rsp) > 1:
+            result2 = "(" + rsp[1].strip()
+        else:
+            result2 = str(result)
+
+    result1 = cleanresult(result1)
+    result2 = cleanresult(result2)
+
+    if float(result1) < 10 and showhints:
+        cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath
+        hints = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)
+        print("\033[33mreturncode: " + str(hints[0]) + "\033[0m")
+        print("\033[30m" + hints[1].split("Report")[0].strip() + "\033[0m")
+
+        if not query_yes_no("Continue with next file?", default=False):
+            raise SystemExit()
+
+    print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
+    return float(result1)
+
+
 def main():
     """
     main
     """
     arguments = IArguments(__doc__)
-    confpath = os.path.expanduser("~/.pylint.conf")
-    print(confpath)
-    print("\033[91mRating your code: \033[0m")
+    confilepathath = os.path.expanduser("~/.pylint.conf")
+    print("\033[91mRating your code:", arguments.folder, "\033[0m")
 
-
-    if not os.path.exists(confpath) or arguments.forcesettings:
-        open(confpath, "w").write(G_PYLINTCONF)
+    if not os.path.exists(confilepathath) or arguments.forcesettings:
+        open(confilepathath, "w").write(G_PYLINTCONF)
 
     checkfiles = set()
+
     if os.path.isfile(arguments.folder):
         checkfiles = [os.path.expanduser(arguments.folder)]
     else:
@@ -496,10 +499,17 @@ def main():
     checkfiles.sort(key=lambda x: (os.path.dirname(x), os.path.basename(x)))
     cnt = 0
     totalscore = 0.0
-    for fp in checkfiles:
+
+    for filepath in checkfiles:
         cnt += 1
-        totalscore += rate_code(cnt, fp, arguments.showhints)
-    print("totalscore: ", totalscore/cnt)
+        totalscore += rate_code(cnt, filepath, arguments.showhints)
+
+    print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(totalscore / cnt), "\033[0m")
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit as se:
+        print(se)
+        exit(0)
