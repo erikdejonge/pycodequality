@@ -7,7 +7,7 @@ created : 26-05-15 / 15:00
 from setuptools import setup
 
 setup(name='pycodequality',
-      version='5',
+      version='7',
       description='Pylint measures code quality for every file in the folder, returns an average',
       url='https://github.com/erikdejonge/pycodequality',
       author='Erik de Jonge',
