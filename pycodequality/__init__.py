@@ -20,9 +20,7 @@ import os
 from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
-G_PYLINTCONF = """
-
-
+G_PYLINTCONF = r"""
 [MASTER]
 # Specify a configuration file.
 #rcfile=
@@ -492,7 +490,7 @@ def main():
     if os.path.isfile(arguments.folder):
         checkfiles = [os.path.expanduser(arguments.folder)]
     else:
-        for root, folders, files in os.walk(arguments.folder):
+        for root, _, files in os.walk(arguments.folder):
             check_files(checkfiles, files, root)
 
     checkfiles = list(checkfiles)
@@ -510,6 +508,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except SystemExit as se:
-        print(se)
+    except SystemExit as exitmsg:
+        print(exitmsg)
         exit(0)
