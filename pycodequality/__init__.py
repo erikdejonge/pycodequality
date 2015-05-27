@@ -21,6 +21,8 @@ from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
 G_PYLINTCONF = r"""
+
+
 [MASTER]
 # Specify a configuration file.
 #rcfile=
@@ -92,8 +94,10 @@ comment=no
 # Template used to display messages. This is a python new-style format string
 # used to format the message information. See doc for all details
 msg-template={msg_id}:{path}:{line}
+             ***************
              {column}:{msg}
-             '
+             ---------------
+
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -422,6 +426,7 @@ def check_files(checkfiles, files, filepatho):
     for file in files:
         if file.endswith(".py"):
             filepath = os.path.join(filepatho, file)
+
             if os.path.exists(filepath):
                 checkfiles.add(filepath)
             else:
@@ -443,10 +448,15 @@ def rate_code(cnt, filepath, showhints):
     @type showhints: bool
     @return: None
     """
-    cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath + " | grep 'Your code has'"
-    result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=False)
+    cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath + " | grep -e 'Your code has' -e 'invalid syntax'"
+    result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)[1]
 
-    if "0.00)" in result:
+    if "invalid syntax" in result:
+        result1 = 0
+        cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath
+        result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)[1]
+        result2 = result.split("************* Module pycodequality.__init__")[0]
+    elif "0.00)" in result:
         result1 = result.split("(")[0].strip()
         result2 = ""
     else:
@@ -458,19 +468,35 @@ def rate_code(cnt, filepath, showhints):
         else:
             result2 = str(result)
 
-    result1 = cleanresult(result1)
-    result2 = cleanresult(result2)
+    if "invalid syntax" not in result:
+        result1 = cleanresult(result1)
+        result2 = cleanresult(result2)
 
     if float(result1) < 10 and showhints:
         cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath
         hints = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)
         print("\033[33mreturncode: " + str(hints[0]) + "\033[0m")
-        print("\033[30m" + hints[1].split("Report")[0].strip() + "\033[0m")
+        reports = hints[1].split("Report")[0].strip().split("---------------")
+
+        for reportline in reports:
+            first = True
+
+            for reportlineseg in reportline.split("***************"):
+                if first:
+                    print("\033[30m" + reportlineseg + "\033[0m")
+                else:
+                    print("\033[97m" + reportlineseg + "\033[0m")
+
+                first = False
 
         if not query_yes_no("Continue with next file?", default=False):
             raise SystemExit()
 
-    print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
+    if "invalid syntax" in result:
+        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\n\033[31m" + result2, "\033[0m")
+    else:
+        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
+
     return float(result1)
 
 
