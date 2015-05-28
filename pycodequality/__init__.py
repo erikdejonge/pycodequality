@@ -482,12 +482,15 @@ def rate_code(cnt, filepath, showhints):
             first = True
 
             for reportlineseg in reportline.split("***************"):
-                if first:
-                    print("\033[30m" + reportlineseg + "\033[0m")
-                else:
-                    print("\033[97m" + reportlineseg + "\033[0m")
+                try:
+                    if first:
+                        print("\033[30m" + reportlineseg + "\033[0m")
+                    else:
+                        print("\033[97m" + reportlineseg + "\033[0m")
 
-                first = False
+                    first = False
+                except:
+                    print(reportlineseg)
 
         if not query_yes_no("Continue with next file?", default=False):
             raise SystemExit()
@@ -528,7 +531,8 @@ def main():
         cnt += 1
         totalscore += rate_code(cnt, filepath, arguments.showhints)
 
-    print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(totalscore / cnt), "\033[0m")
+    if cnt > 0:
+        print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(totalscore / cnt), "\033[0m")
 
 
 if __name__ == "__main__":
