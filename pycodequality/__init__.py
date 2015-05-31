@@ -518,6 +518,7 @@ def main():
 
     if os.path.isfile(arguments.folder):
         checkfiles = [os.path.expanduser(arguments.folder)]
+        arguments.showhints = True
     else:
         for root, _, files in os.walk(arguments.folder):
             check_files(checkfiles, files, root)
