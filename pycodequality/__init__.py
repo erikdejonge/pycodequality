@@ -23,7 +23,6 @@ from arguments import Arguments
 from consoleprinter import query_yes_no
 G_PYLINTCONF = r"""
 
-
 [MASTER]
 # Specify a configuration file.
 #rcfile=
@@ -86,7 +85,7 @@ reports=yes
 # respectively contain the number of errors / warnings messages and the total
 # number of statements analyzed. This is used by the global evaluation report
 # (RP0004).
-evaluation=max(float(10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)), 0.0)
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
 
 # Add a comment according to your evaluation note. This is used by the global
 # evaluation report (RP0004).
@@ -95,10 +94,8 @@ comment=no
 # Template used to display messages. This is a python new-style format string
 # used to format the message information. See doc for all details
 msg-template={msg_id}:{path}:{line}
-             ***************
              {column}:{msg}
-             ---------------
-
+             '
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -348,7 +345,7 @@ max-args=12
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=20
+max-locals=15
 
 # Maximum number of return / yield for function / method body
 max-returns=6
