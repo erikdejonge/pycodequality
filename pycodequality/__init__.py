@@ -19,7 +19,7 @@ import os
 from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
-G_PYLINTCONF = r"""
+G_PYLINTCONF = """
 
 
 [MASTER]
@@ -498,7 +498,7 @@ def reportlinesegment(first, reportline):
                             else:
                                 color = 33
 
-                            print(linecnt, "\033[" + str(color) + "m" + line + "\033[0m")
+                            print("\033[" + str(color) + "m" + line + "\033[0m")
                             linecnt += 1
 
                     print()
