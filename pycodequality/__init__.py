@@ -8,20 +8,19 @@ Usage:
 
 Options:
   -h --help             Show this screen.
-  -f --forcesettings    Force writing of the settings
   -s --showhints        Show hints to make the code betterq
 
 author  : rabshakeh (erik@a8.nl)
 project : pycodequality
 created : 26-05-15 / 15:00
 """
-
 import os
 
 from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
 G_PYLINTCONF = r"""
+
 
 [MASTER]
 # Specify a configuration file.
@@ -96,6 +95,7 @@ comment=no
 msg-template={msg_id}:{path}:{line}
              {column}:{msg}
              '
+
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -338,7 +338,7 @@ exclude-protected=_asdict,_fields,_replace,_source,_make
 
 [DESIGN]
 # Maximum number of arguments for function / method
-max-args=12
+max-args=5
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
@@ -368,7 +368,6 @@ min-public-methods=2
 # Maximum number of public methods for a class (see R0904).
 max-public-methods=20
 
-
 [IMPORTS]
 # Deprecated modules which should not be used, separated by a comma
 deprecated-modules=stringprep,optparse
@@ -397,21 +396,15 @@ class IArguments(Arguments):
     """
     IArguments
     """
-    def __init__(self, doc=None, validateschema=None, argvalue=None, yamlstr=None, yamlfile=None, parse_arguments=True, persistoption=False, alwaysfullhelp=False, version=None, parent=None):
+    def __init__(self, doc=None):
         """
         @type doc: str, None
-        @type validateschema: Schema, None
-        @type yamlfile: str, None
-        @type yamlstr: str, None
-        @type parse_arguments: bool
-        @type argvalue: str, None
         @return: None
         """
         self.folder = ""
         self.help = False
-        self.forcesettings = False
         self.showhints = False
-        super().__init__(doc, validateschema, argvalue, yamlstr, yamlfile, parse_arguments, persistoption, alwaysfullhelp, version, parent)
+        super().__init__(doc)
 
 
 def check_files(checkfiles, files, filepatho):
@@ -446,17 +439,16 @@ def cleanresult(result):
     return result1
 
 
-def doreport(cnt, filepath, numfiles, result, result1, result2, showhints):
+def doreport(cnt, filepath, numfiles, rest, showhints):
     """
     @type cnt: int
     @type filepath: str
     @type numfiles: cnt
-    @type result: str
-    @type result1: str
-    @type result2: str
+    @type rest: tuple
     @type showhints: list
     @return: None
     """
+    result, result1, result2 = rest
     if float(result1) < 10 and showhints:
         if float(result1) < 5.5:
             result1 = "\033[31m" + str(result) + "\033[0m"
@@ -466,36 +458,9 @@ def doreport(cnt, filepath, numfiles, result, result1, result2, showhints):
         print("\033[37mreturncode: " + str(hints[0]) + "\033[0m")
         reports = hints[1].split("Report")[0].strip().split("---------------")
 
-
         for reportline in reports:
             first = True
-
-            for reportlineseg in reportline.split("***************"):
-                try:
-                    if first:
-                        for lines in reportlineseg.split("\n\n"):
-                            linecnt = 0
-
-                            for line in lines.split("\n"):
-                                if ":" not in line:
-                                    print("\033[34m" + line.replace("************* ", "") + "\033[0m\n-------")
-                                else:
-                                    if linecnt % 2 == 0:
-                                        color = 37
-                                    else:
-                                        color = 33
-
-                                    print(linecnt, "\033[" + str(color) + "m" + line + "\033[0m")
-                                    linecnt += 1
-
-                            print()
-                    else:
-                        print("\033[97m" + reportlineseg + "\033[0m")
-
-                    first = False
-                except BaseException as exc:
-                    print(exc)
-                    print(reportlineseg)
+            reportlinesegment(first, reportline)
 
         if cnt < numfiles:
             if not query_yes_no("Continue with next file?", default=False):
@@ -510,6 +475,40 @@ def doreport(cnt, filepath, numfiles, result, result1, result2, showhints):
             result1 = "\033[32m" + str(result1) + "\033[0m"
 
         print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
+
+
+def reportlinesegment(first, reportline):
+    """
+    @type first: str
+    @type reportline: str
+    @return: None
+    """
+    for reportlineseg in reportline.split("***************"):
+        try:
+            if first:
+                for lines in reportlineseg.split("\n\n"):
+                    linecnt = 0
+
+                    for line in lines.split("\n"):
+                        if ":" not in line:
+                            print("\033[34m" + line.replace("************* ", "") + "\033[0m\n-------")
+                        else:
+                            if linecnt % 2 == 0:
+                                color = 37
+                            else:
+                                color = 33
+
+                            print(linecnt, "\033[" + str(color) + "m" + line + "\033[0m")
+                            linecnt += 1
+
+                    print()
+            else:
+                print("\033[97m" + reportlineseg + "\033[0m")
+
+            first = False
+        except BaseException as exc:
+            print(exc)
+            print(reportlineseg)
 
 
 def rate_code(cnt, filepath, showhints, numfiles):
@@ -547,7 +546,7 @@ def rate_code(cnt, filepath, showhints, numfiles):
         fresult1 = result1 = cleanresult(result1)
         result2 = cleanresult(result2)
 
-    doreport(cnt, filepath, numfiles, result, result1, result2, showhints)
+    doreport(cnt, filepath, numfiles, (result, result1, result2), showhints)
     return float(fresult1)
 
 
@@ -558,10 +557,7 @@ def main():
     arguments = IArguments(__doc__)
     confilepathath = os.path.expanduser("~/.pylint.conf")
     print("\033[91mRating your code:", arguments.folder, "\033[0m")
-
-    if not os.path.exists(confilepathath) or arguments.forcesettings:
-        open(confilepathath, "w").write(G_PYLINTCONF)
-
+    open(confilepathath, "w").write(G_PYLINTCONF)
     checkfiles = set()
 
     if os.path.isfile(arguments.folder):
@@ -583,10 +579,10 @@ def main():
     if cnt > 0:
         print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(totalscore / cnt), "\033[0m")
 
+
 if __name__ == "__main__":
     try:
         main()
     except SystemExit as exitmsg:
         print(exitmsg)
         exit(0)
-
