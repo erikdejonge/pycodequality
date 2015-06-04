@@ -15,6 +15,7 @@ author  : rabshakeh (erik@a8.nl)
 project : pycodequality
 created : 26-05-15 / 15:00
 """
+
 import os
 
 from cmdssh import call_command
@@ -85,7 +86,7 @@ reports=yes
 # respectively contain the number of errors / warnings messages and the total
 # number of statements analyzed. This is used by the global evaluation report
 # (RP0004).
-evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+evaluation=max(float(10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)), 0.0)
 
 # Add a comment according to your evaluation note. This is used by the global
 # evaluation report (RP0004).
@@ -347,7 +348,7 @@ max-args=12
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=15
+max-locals=20
 
 # Maximum number of return / yield for function / method body
 max-returns=6
@@ -438,21 +439,95 @@ def cleanresult(result):
     @type result: str
     @return: None
     """
-    return result.replace("Your code has been rated at", "").replace("previous run", "was").replace("/10", "").strip()
+    result1 = result.replace("Your code has been rated at", "").replace("previous run", "was").replace("/10", "").strip()
+    if result1.strip() != "":
+        if "(was" in result1:
+            pass
+        else:
+            result1 = str(max(0, float(result1)))
+
+    return result1
 
 
-def rate_code(cnt, filepath, showhints):
+def doreport(cnt, filepath, numfiles, result, result1, result2, showhints):
+    """
+    @type cnt: int
+    @type filepath: str
+    @type numfiles: cnt
+    @type result: str
+    @type result1: str
+    @type result2: str
+    @type showhints: list
+    @return: None
+    """
+    if float(result1) < 10 and showhints:
+        if float(result1) < 5.5:
+            result1 = "\033[31m" + str(result) + "\033[0m"
+
+        cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath
+        hints = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)
+        print("\033[37mreturncode: " + str(hints[0]) + "\033[0m")
+        reports = hints[1].split("Report")[0].strip().split("---------------")
+
+
+        for reportline in reports:
+            first = True
+
+            for reportlineseg in reportline.split("***************"):
+                try:
+                    if first:
+                        for lines in reportlineseg.split("\n\n"):
+                            linecnt = 0
+
+                            for line in lines.split("\n"):
+                                if ":" not in line:
+                                    print("\033[34m" + line.replace("************* ", "") + "\033[0m\n-------")
+                                else:
+                                    if linecnt % 2 == 0:
+                                        color = 37
+                                    else:
+                                        color = 33
+
+                                    print(linecnt, "\033[" + str(color) + "m" + line + "\033[0m")
+                                    linecnt += 1
+
+                            print()
+                    else:
+                        print("\033[97m" + reportlineseg + "\033[0m")
+
+                    first = False
+                except BaseException as exc:
+                    print(exc)
+                    print(reportlineseg)
+
+        if cnt < numfiles:
+            if not query_yes_no("Continue with next file?", default=False):
+                raise SystemExit()
+
+    if "invalid syntax" in result:
+        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\n\033[31m" + result2, "\033[0m")
+    else:
+        if float(result1) < 5.5:
+            result1 = "\033[31m" + str(result1) + "\033[0m"
+        elif float(result1) > 9:
+            result1 = "\033[32m" + str(result1) + "\033[0m"
+
+        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
+
+
+def rate_code(cnt, filepath, showhints, numfiles):
     """
     @type cnt: int
     @type filepath: str
     @type showhints: bool
     @return: None
     """
+    print("-------")
     cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath + " | grep -e 'Your code has' -e 'invalid syntax'"
     result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)[1]
 
     if "invalid syntax" in result:
-        result1 = 0
+        result1 = "0"
         cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath
         result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)[1]
         result2 = result.split("************* Module pycodequality.__init__")[0]
@@ -468,39 +543,15 @@ def rate_code(cnt, filepath, showhints):
         else:
             result2 = str(result)
 
-    if "invalid syntax" not in result:
-        result1 = cleanresult(result1)
+    if "(was" in result:
+        fresult1 = result1 = cleanresult(result1)
+        result2 = cleanresult(result2)
+    elif "invalid syntax" not in result:
+        fresult1 = result1 = cleanresult(result1)
         result2 = cleanresult(result2)
 
-    if float(result1) < 10 and showhints:
-        cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath
-        hints = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)
-        print("\033[33mreturncode: " + str(hints[0]) + "\033[0m")
-        reports = hints[1].split("Report")[0].strip().split("---------------")
-
-        for reportline in reports:
-            first = True
-
-            for reportlineseg in reportline.split("***************"):
-                try:
-                    if first:
-                        print("\033[30m" + reportlineseg + "\033[0m")
-                    else:
-                        print("\033[97m" + reportlineseg + "\033[0m")
-
-                    first = False
-                except:
-                    print(reportlineseg)
-
-        if not query_yes_no("Continue with next file?", default=False):
-            raise SystemExit()
-
-    if "invalid syntax" in result:
-        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\n\033[31m" + result2, "\033[0m")
-    else:
-        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
-
-    return float(result1)
+    doreport(cnt, filepath, numfiles, result, result1, result2, showhints)
+    return float(fresult1)
 
 
 def main():
@@ -530,11 +581,10 @@ def main():
 
     for filepath in checkfiles:
         cnt += 1
-        totalscore += rate_code(cnt, filepath, arguments.showhints)
+        totalscore += rate_code(cnt, filepath, arguments.showhints, len(checkfiles))
 
     if cnt > 0:
         print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(totalscore / cnt), "\033[0m")
-
 
 if __name__ == "__main__":
     try:
@@ -542,3 +592,4 @@ if __name__ == "__main__":
     except SystemExit as exitmsg:
         print(exitmsg)
         exit(0)
+
