@@ -20,11 +20,14 @@ from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
 
+
 def get_pylint_conf():
     """
     return pylint configuration
     """
     return """
+
+
 [MASTER]
 # Specify a configuration file.
 #rcfile=
@@ -213,7 +216,6 @@ docstring-min-length=-1
 [FORMAT]
 # Maximum number of characters on a single line.
 max-line-length=300
-
 
 # Allow the body of an if to be on the same line as the test if there is no
 # else.
@@ -469,21 +471,23 @@ def doreport(cnt, filepath, numfiles, rest, showhints):
             if not query_yes_no("Continue with next file?", default=False):
                 raise SystemExit()
 
+    color = 30
+
     if "invalid syntax" in result:
         print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\n\033[31m" + result2, "\033[0m")
     else:
-
         if ", -" in result2:
             color = 31
         elif ", +" in result2:
-            color = 92
+            color = 32
         else:
             if float(result1) < 5.5:
                 color = 31
-            elif float(result1) > 5.5 and float(result1) <= 9:
+            elif float(result1) > 5.5 and float(result1) < 10:
                 color = 33
-            elif float(result1) > 9:
-                color = 91
+                print("color33", result1)
+            elif float(result1) == 10:
+                color = 92
 
         print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[" + str(color) + "m", result1, "\033[90m" + result2, "\033[0m")
 
@@ -573,7 +577,6 @@ def main():
     pylintconf = get_pylint_conf()
     pylintconf += "\n# Regexp for a line that is allowed to be longer than the limit.\n"
     pylintconf += r"ignore-long-lines=^\s*(# )?<?https?://\S+>?$\n\n"
-
 
     print("\033[91mRating your code:", arguments.folder, "\033[0m")
     open(confilepathath, "w").write(pylintconf)
