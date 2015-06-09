@@ -19,9 +19,12 @@ import os
 from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
-G_PYLINTCONF = """
 
-
+def get_pylint_conf():
+    """
+    return pylint configuration
+    """
+    return """
 [MASTER]
 # Specify a configuration file.
 #rcfile=
@@ -211,8 +214,6 @@ docstring-min-length=-1
 # Maximum number of characters on a single line.
 max-line-length=300
 
-# Regexp for a line that is allowed to be longer than the limit.
-ignore-long-lines=^\s*(# )?<?https?://\S+>?$
 
 # Allow the body of an if to be on the same line as the test if there is no
 # else.
@@ -368,6 +369,7 @@ min-public-methods=2
 # Maximum number of public methods for a class (see R0904).
 max-public-methods=20
 
+
 [IMPORTS]
 # Deprecated modules which should not be used, separated by a comma
 deprecated-modules=stringprep,optparse
@@ -443,12 +445,13 @@ def doreport(cnt, filepath, numfiles, rest, showhints):
     """
     @type cnt: int
     @type filepath: str
-    @type numfiles: cnt
+    @type numfiles: int
     @type rest: tuple
-    @type showhints: list
+    @type showhints: bool
     @return: None
     """
     result, result1, result2 = rest
+
     if float(result1) < 10 and showhints:
         if float(result1) < 5.5:
             result1 = "\033[31m" + str(result) + "\033[0m"
@@ -469,17 +472,25 @@ def doreport(cnt, filepath, numfiles, rest, showhints):
     if "invalid syntax" in result:
         print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\n\033[31m" + result2, "\033[0m")
     else:
-        if float(result1) < 5.5:
-            result1 = "\033[31m" + str(result1) + "\033[0m"
-        elif float(result1) > 9:
-            result1 = "\033[32m" + str(result1) + "\033[0m"
 
-        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\033[90m" + result2, "\033[0m")
+        if ", -" in result2:
+            color = 31
+        elif ", +" in result2:
+            color = 92
+        else:
+            if float(result1) < 5.5:
+                color = 31
+            elif float(result1) > 5.5 and float(result1) <= 9:
+                color = 33
+            elif float(result1) > 9:
+                color = 91
+
+        print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[" + str(color) + "m", result1, "\033[90m" + result2, "\033[0m")
 
 
 def reportlinesegment(first, reportline):
     """
-    @type first: str
+    @type first: bool
     @type reportline: str
     @return: None
     """
@@ -516,6 +527,7 @@ def rate_code(cnt, filepath, showhints, numfiles):
     @type cnt: int
     @type filepath: str
     @type showhints: bool
+    @type numfiles: int
     @return: None
     """
     print("-------")
@@ -545,6 +557,8 @@ def rate_code(cnt, filepath, showhints, numfiles):
     elif "invalid syntax" not in result:
         fresult1 = result1 = cleanresult(result1)
         result2 = cleanresult(result2)
+    else:
+        fresult1 = result2
 
     doreport(cnt, filepath, numfiles, (result, result1, result2), showhints)
     return float(fresult1)
@@ -556,8 +570,13 @@ def main():
     """
     arguments = IArguments(__doc__)
     confilepathath = os.path.expanduser("~/.pylint.conf")
+    pylintconf = get_pylint_conf()
+    pylintconf += "\n# Regexp for a line that is allowed to be longer than the limit.\n"
+    pylintconf += r"ignore-long-lines=^\s*(# )?<?https?://\S+>?$\n\n"
+
+
     print("\033[91mRating your code:", arguments.folder, "\033[0m")
-    open(confilepathath, "w").write(G_PYLINTCONF)
+    open(confilepathath, "w").write(pylintconf)
     checkfiles = set()
 
     if os.path.isfile(arguments.folder):
