@@ -12,7 +12,7 @@ if (sys.version_info.major == 2):
 from setuptools import setup
 
 setup(name='pycodequality',
-      version='19',
+      version='20',
       description='Pylint measures code quality for every file in the folder, returns an average',
       url='https://github.com/erikdejonge/pycodequality',
       author='Erik de Jonge',
