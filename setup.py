@@ -4,10 +4,15 @@ author  : rabshakeh (erik@a8.nl)
 project : pycodequality
 created : 26-05-15 / 15:00
 """
+import sys
+if (sys.version_info.major == 2):
+    print("only python3 is supported")
+    exit(1)
+
 from setuptools import setup
 
 setup(name='pycodequality',
-      version='17',
+      version='19',
       description='Pylint measures code quality for every file in the folder, returns an average',
       url='https://github.com/erikdejonge/pycodequality',
       author='Erik de Jonge',
@@ -22,7 +27,6 @@ setup(name='pycodequality',
       zip_safe=True,
       install_requires=['pylint', 'pylint-django', 'cmdssh'],
       classifiers=[
-          "Programming Language :: Python",
           "Programming Language :: Python :: 3",
           "Development Status :: 4 - Beta ",
           "Intended Audience :: Developers",

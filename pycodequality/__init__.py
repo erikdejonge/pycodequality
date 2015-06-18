@@ -14,8 +14,12 @@ author  : rabshakeh (erik@a8.nl)
 project : pycodequality
 created : 26-05-15 / 15:00
 """
-import os
+import sys
+if (sys.version_info.major == 2):
+    print("only python3 is supported")
+    exit(1)
 
+import os
 from cmdssh import call_command
 from arguments import Arguments
 from consoleprinter import query_yes_no
@@ -565,6 +569,9 @@ def rate_code(cnt, filepath, showhints, numfiles):
         fresult1 = result2
 
     doreport(cnt, filepath, numfiles, (result, result1, result2), showhints)
+    if "invalid syntax" in fresult1:
+        print("invalid syntax detected (py3 only?)")
+        exit(1)
     return float(fresult1)
 
 
