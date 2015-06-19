@@ -489,7 +489,6 @@ def doreport(cnt, filepath, numfiles, rest, showhints):
                 color = 31
             elif float(result1) > 5.5 and float(result1) < 10:
                 color = 33
-                print("color33", result1)
             elif float(result1) == 10:
                 color = 92
 
