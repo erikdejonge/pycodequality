@@ -537,7 +537,6 @@ def rate_code(cnt, filepath, showhints, numfiles):
     @type numfiles: int
     @return: None
     """
-    print("-------")
     cmd = "pylint -j 8 --rcfile=~/.pylint.conf --load-plugins pylint_django " + filepath + " | grep -e 'Your code has' -e 'invalid syntax'"
     result = call_command(cmd, streamoutput=False, returnoutput=True, ret_and_code=True)[1]
 
