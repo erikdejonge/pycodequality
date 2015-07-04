@@ -14,11 +14,16 @@ author  : rabshakeh (erik@a8.nl)
 project : pycodequality
 created : 26-05-15 / 15:00
 """
-import sys
-if (sys.version_info.major == 2):
-    print("only python3 is supported")
-    exit(1)
-
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from builtins import open
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
 import os
 from cmdssh import call_command
 from arguments import Arguments
@@ -457,7 +462,14 @@ def doreport(cnt, filepath, numfiles, rest, showhints):
     @return: None
     """
     result, result1, result2 = rest
-
+    try:
+        float(result1)
+    except ValueError:
+        result1 = "0"
+    try:
+        float(result2)
+    except ValueError:
+        result2 = "0"
     if float(result1) < 10 and showhints:
         if float(result1) < 5.5:
             result1 = "\033[31m" + str(result) + "\033[0m"
@@ -577,6 +589,9 @@ def main():
     """
     main
     """
+    oldpcq = "/usr/local/bin/pcq"
+    if os.path.exists(oldpcq) and os.path.isfile(oldpcq):
+        os.remove(oldpcq)
     arguments = IArguments(__doc__)
     confilepathath = os.path.expanduser("~/.pylint.conf")
     pylintconf = get_pylint_conf()
@@ -604,7 +619,7 @@ def main():
         totalscore += rate_code(cnt, filepath, arguments.showhints, len(checkfiles))
 
     if cnt > 0:
-        print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(totalscore / cnt), "\033[0m")
+        print("\033[34m---\nstotalscore:\033[34m {:.2f}".format(old_div(totalscore, cnt)), "\033[0m")
 
 
 if __name__ == "__main__":
