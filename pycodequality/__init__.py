@@ -597,9 +597,6 @@ def main():
     """
     main
     """
-    oldpcq = "/usr/local/bin/pcq"
-    if os.path.exists(oldpcq) and os.path.isfile(oldpcq):
-        os.remove(oldpcq)
     arguments = IArguments(__doc__)
     confilepathath = os.path.expanduser("~/.pylint.conf")
     pylintconf = get_pylint_conf()
