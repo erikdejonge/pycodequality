@@ -488,6 +488,14 @@ def doreport(cnt, filepath, numfiles, rest, showhints):
                 raise SystemExit()
 
     color = 30
+    try:
+        float(result1)
+    except ValueError:
+        result1 = "0"
+    try:
+        float(result2)
+    except ValueError:
+        result2 = "0"
 
     if "invalid syntax" in result:
         print("\033[34m" + str(cnt) + ". " + os.path.join(os.path.basename(os.path.dirname(filepath)), os.path.basename(filepath)) + ":\033[34m", result1, "\n\033[31m" + result2, "\033[0m")

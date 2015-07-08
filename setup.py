@@ -16,22 +16,15 @@ import sys
 
 from setuptools import setup
 def main():
-    if sys.version_info.major == 2:
-        my_entry_points = {
-            'console_scripts': [
-                'pcq2=pycodequality:main',
-            ],
-        }
+    my_entry_points = {
+        'console_scripts': [
+            'pcq=pycodequality:main',
+        ],
+    }
 
-    elif sys.version_info.major == 2:
-        my_entry_points = {
-            'console_scripts': [
-                'pcq3=pycodequality:main',
-            ],
-        }
+
     setup(name='pycodequality',
-          version='30',
-
+          version='32',
           description='Pylint measures code quality for every file in the folder, returns an average',
           url='https://github.com/erikdejonge/pycodequality',
           author='Erik de Jonge',
