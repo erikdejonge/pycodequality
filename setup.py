@@ -24,7 +24,7 @@ def main():
 
 
     setup(name='pycodequality',
-          version='34',
+          version='35',
           description='Pylint measures code quality for every file in the folder, returns an average',
           url='https://github.com/erikdejonge/pycodequality',
           author='Erik de Jonge',
