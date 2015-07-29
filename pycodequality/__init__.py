@@ -600,6 +600,7 @@ def main():
     arguments = IArguments(__doc__)
     confilepathath = os.path.expanduser("~/.pylint.conf")
     pylintconf = get_pylint_conf()
+
     pylintconf += "\n# Regexp for a line that is allowed to be longer than the limit.\n"
     pylintconf += r"ignore-long-lines=^\s*(# )?<?https?://\S+>?$\n\n"
 
